@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "319150924721",
+    "firebase_url": "https://herdr-d279d.firebaseio.com",
+    "project_id": "herdr-d279d",
+    "storage_bucket": "herdr-d279d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:319150924721:android:71fce7f19439f0da",
+        "android_client_info": {
+          "package_name": "com.herdr.herdr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "319150924721-r4f6f5ksqhndask4gj93ta9egroa0nb4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.herdr.herdr",
+            "certificate_hash": "6ac9f409abde7c45ff3e3a1e3c778d8dff08106a"
+          }
+        },
+        {
+          "client_id": "319150924721-92i3t90tmd9d6o5vhlqodir3tof3f4tu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhX69vopWyxbJIqEix5JjJ3NL4iC7A3ns"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "319150924721-92i3t90tmd9d6o5vhlqodir3tof3f4tu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
