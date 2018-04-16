@@ -42,7 +42,7 @@
         android:layout_weight="5">
 
         <ListView
-            android:id="@+id/herds_part_of"
+            android:id="@+id/list_part_of"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="5dp"

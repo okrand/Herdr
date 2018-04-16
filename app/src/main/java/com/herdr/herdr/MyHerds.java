@@ -1,6 +1,7 @@
 package com.herdr.herdr;
 
 import android.content.Intent;
+import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
@@ -9,17 +10,34 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Krando67 on 3/8/18.
  */
 
 public class MyHerds extends AppCompatActivity {
+    String TAG = "MY HERDS";
+    FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.my_herds);
-        Log.d("New Activity", "MyHerds");
 
         // Functionality for Add New Herd (Plus) Button
         FloatingActionButton fabAdd = findViewById(R.id.add_button_my_herds);
@@ -31,6 +49,9 @@ public class MyHerds extends AppCompatActivity {
                 MyHerds.this.startActivity(startNewHerds);
             }
         });
+
+        populateLeadingHerds();
+        populateParticipatingHerds();
 
         //Navigation View
         BottomNavigationView navView = findViewById(R.id.myherds_navigation);
@@ -56,6 +77,76 @@ public class MyHerds extends AppCompatActivity {
                         break;
                 }
                 return false;
+            }
+        });
+    }
+
+    //Get Herds user is leading from Firebase
+    private void populateLeadingHerds() {
+        final List<Herd> daList = new ArrayList<>();
+        Query queryRef = FirebaseDatabase.getInstance().getReference().child("herds").orderByChild("creatorID").equalTo(currentUser.getUid());
+        //DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference().child("herds");
+        queryRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot dsp : dataSnapshot.getChildren()) {
+                    Herd h = dsp.getValue(Herd.class);
+                    assert h != null;
+                    Log.d("HERD", h.getTitle());
+                    daList.add(h);
+                }
+                ListView leadingListView = findViewById(R.id.list_leading);
+                ArrayAdapter adapter = new ArrayAdapter<Herd>(MyHerds.this, R.layout.herd_list_item, R.id.herd_item_name, daList) {
+                    @Override
+                    public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
+                        final View view =  super.getView(position, convertView, parent);
+                        TextView itemName = view.findViewById(R.id.herd_item_name);
+                        itemName.setText(daList.get(position).getTitle());
+                        return view;
+                    }
+                };
+                leadingListView.setAdapter(adapter);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.w(TAG, "loadLeadingHerd:onCancelled", databaseError.toException());
+            }
+        });
+    }
+
+    private void populateParticipatingHerds() {
+        final List<Herd> daList = new ArrayList<>();
+        //Query queryRef = FirebaseDatabase.getInstance().getReference().child("herds"));
+        DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference().child("herds");
+        mDatabase.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot dsp : dataSnapshot.getChildren()) {
+                    Herd h = dsp.getValue(Herd.class);
+                    assert h != null;
+                    List<String> subs = h.getSubscriberID();
+                    if (subs.contains(currentUser.getUid())) {
+                        Log.d("HERD", h.getTitle());
+                        daList.add(h);
+                    }
+                }
+                ListView leadingListView = findViewById(R.id.list_part_of);
+                ArrayAdapter adapter = new ArrayAdapter<Herd>(MyHerds.this, R.layout.herd_list_item, R.id.herd_item_name, daList) {
+                    @Override
+                    public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
+                        final View view =  super.getView(position, convertView, parent);
+                        TextView itemName = view.findViewById(R.id.herd_item_name);
+                        itemName.setText(daList.get(position).getTitle());
+                        return view;
+                    }
+                };
+                leadingListView.setAdapter(adapter);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.w(TAG, "loadLeadingHerd:onCancelled", databaseError.toException());
             }
         });
     }
