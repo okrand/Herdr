@@ -33,6 +33,7 @@ import java.util.List;
 
 public class MyHerds extends AppCompatActivity {
     String TAG = "MY HERDS";
+    private static final int NEW_HERD = 9;
     FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -46,7 +47,7 @@ public class MyHerds extends AppCompatActivity {
             public void onClick(View v) {
                 Intent startNewHerds = new Intent(MyHerds.this, NewHerd.class);
                 //browseEm.putExtra("key", value); //Optional parameters
-                MyHerds.this.startActivity(startNewHerds);
+                MyHerds.this.startActivityForResult(startNewHerds, NEW_HERD);
             }
         });
 
@@ -79,6 +80,20 @@ public class MyHerds extends AppCompatActivity {
                 return false;
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch(requestCode) {
+            case NEW_HERD: {
+                if (resultCode == RESULT_OK) {
+                    populateLeadingHerds();
+                    populateParticipatingHerds();
+                }
+            }
+            break;
+        }
     }
 
     //Get Herds user is leading from Firebase

@@ -1,8 +1,7 @@
 package com.herdr.herdr;
 
-import com.google.android.gms.location.places.Place;
-
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -10,14 +9,19 @@ import java.util.List;
  */
 
 public class Herd {
+    private String key;
     private String creatorID;
     private String title;
     private String description;
-    private int today_tomorrow;
     private String time;
+    private Date cal;
     private LatLon place;
     private String address;
     private List<String> subscriberID = Collections.emptyList();
+
+    public String getKey() {
+        return key;
+    }
 
     public String getCreatorID() {
         return creatorID;
@@ -31,12 +35,12 @@ public class Herd {
         return description;
     }
 
-    public int getToday_tomorrow() {
-        return today_tomorrow;
-    }
-
     public String getTime() {
         return time;
+    }
+
+    public Date getCal() {
+        return cal;
     }
 
     public LatLon getPlace() {
@@ -49,6 +53,10 @@ public class Herd {
 
     public List<String> getSubscriberID() {
         return subscriberID;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public void setCreatorID(String creatorID) {
@@ -71,15 +79,18 @@ public class Herd {
         this.address = address;
     }
 
-    public void setToday_tomorrow(int today_tomorrow) {
-        this.today_tomorrow = today_tomorrow;
-    }
-
     public void setTime(String time) {
         this.time = time;
     }
 
+    public void setCal(Date cal) {
+        this.cal = cal;
+    }
+
     public void setSubscriberID(List<String> subscriberID) {
         this.subscriberID = subscriberID;
+    }
+    public void addSubscriber(String newSubID){
+        this.subscriberID.add(newSubID);
     }
 }

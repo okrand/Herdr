@@ -3,6 +3,7 @@ package com.herdr.herdr;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -14,6 +15,7 @@ import android.support.design.widget.BottomNavigationView;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MenuItem;
@@ -22,6 +24,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -39,22 +42,26 @@ import java.util.List;
  */
 
 public class Browse extends AppCompatActivity {
+    Boolean gotHerd = false;
     String TAG = "BROWSE";
     private static final int MY_PERMISSION_ACCESS_FINE_LOCATION = 12;
+    private static final int NEW_HERD = 9;
     Location myLoc;
+    ArrayAdapter adapter;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.browse);
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         //Get location permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     MY_PERMISSION_ACCESS_FINE_LOCATION);
         }
-        startLocationUpdates();
+        else {
+            startLocationUpdates();
+        }
 
         // Functionality for Add New Herd (Plus) Button
         FloatingActionButton fabAdd = findViewById(R.id.add_button_browse);
@@ -62,11 +69,9 @@ public class Browse extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent startNewHerd = new Intent(Browse.this, NewHerd.class);
-                Browse.this.startActivity(startNewHerd);
+                Browse.this.startActivityForResult(startNewHerd, NEW_HERD);
             }
         });
-
-        getHerdsWithin15Miles();
 
         // Bottom Navigation
         BottomNavigationView navView = findViewById(R.id.browse_navigation);
@@ -96,35 +101,57 @@ public class Browse extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSION_ACCESS_FINE_LOCATION: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startLocationUpdates();
+                } else {
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch(requestCode) {
+            case NEW_HERD: {
+                if (resultCode == RESULT_OK)
+                    getHerdsWithin15Miles();
+            }
+            break;
+        }
+    }
+
     //Get Herds within 15 miles from Firebase
     private void getHerdsWithin15Miles() {
         final List<Herd> daList = new ArrayList<>();
-        DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference().child("herds");
-        mDatabase.addListenerForSingleValueEvent(new ValueEventListener() {
+        final DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference().child("herds");
+        mDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
+                daList.clear();
                 for (DataSnapshot dsp : dataSnapshot.getChildren()) {
                     Herd h = dsp.getValue(Herd.class);
                     assert h != null;
                     Log.d("HERD", h.getTitle());
+                    h.setKey(dsp.getKey());
                     Location herdLoc = new Location("dummyprovider");
                     herdLoc.setLongitude(h.getPlace().getLongitude());
                     herdLoc.setLatitude(h.getPlace().getLatitude());
-                    Log.d("DISTANCETO", h.getTitle() + herdLoc.distanceTo(myLoc));
-                    if (herdLoc.distanceTo(myLoc) < 24140.2) //15 miles is 24140 meters
+                    if (herdLoc.distanceTo(myLoc) < 24140.2) { //15 miles is 24140 meters
                         daList.add(h);
-                }
-                ListView herdsListView = findViewById(R.id.herds_browse);
-                ArrayAdapter adapter = new ArrayAdapter<Herd>(Browse.this, R.layout.herd_list_item, R.id.herd_item_name, daList) {
-                    @Override
-                    public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
-                        final View view =  super.getView(position, convertView, parent);
-                        TextView itemName = view.findViewById(R.id.herd_item_name);
-                        itemName.setText(daList.get(position).getTitle());
-                        return view;
+                        adapter.notifyDataSetChanged();
                     }
-                };
-                herdsListView.setAdapter(adapter);
+                }
             }
 
             @Override
@@ -132,11 +159,59 @@ public class Browse extends AppCompatActivity {
                 Log.w(TAG, "loadHerd:onCancelled", databaseError.toException());
             }
         });
+        gotHerd = true;
+
+        ListView herdsListView = findViewById(R.id.herds_browse);
+        adapter = new ArrayAdapter<Herd>(Browse.this, R.layout.herd_list_item, R.id.herd_item_name, daList) {
+            @Override
+            public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
+                final View view =  super.getView(position, convertView, parent);
+                TextView itemName = view.findViewById(R.id.herd_item_name);
+                itemName.setText(daList.get(position).getTitle());
+                view.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        AlertDialog.Builder alert = new AlertDialog.Builder(Browse.this,android.R.style.Theme_Material_Dialog_Alert);
+                        alert.setTitle(daList.get(position).getTitle());
+                        String alertText = daList.get(position).getDescription() + "\n\n" + daList.get(position).getAddress();
+                        TextView itemText = new TextView(Browse.this);
+                        itemText.setText(alertText);
+                        itemText.setTextColor(getResources().getColor(android.R.color.white));
+                        alert.setView(itemText);
+
+                        alert.setPositiveButton("Join", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                //add user to event
+                                FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                                if (!currentUser.getUid().equals(daList.get(position).getCreatorID())){
+                                    Log.d("JOIN HERD","Add user to daList");
+                                    //daList.get(position).getSubscriberID().add(currentUser.getUid());
+                                    mDatabase.child(daList.get(position).getKey()).child("subscribers").child(currentUser.getUid()).setValue(true);
+                                }
+                                else
+                                    Toast.makeText(Browse.this, "You are the herdr of this herd", Toast.LENGTH_SHORT).show();
+
+                            }
+                        });
+                        alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                // Canceled.
+                                Log.d("ALERT", "Cancel");
+                            }
+                        });
+                        alert.show();
+                    }
+                });
+                return view;
+            }
+        };
+        herdsListView.setAdapter(adapter);
     }
 
     // Trigger new location updates at interval
     @SuppressLint("MissingPermission")
     protected void startLocationUpdates() {
+        Log.d("LOCATION UPDATES", "START");
         // Acquire a reference to the system Location Manager
         final LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         if (locationManager != null) {
@@ -144,12 +219,16 @@ public class Browse extends AppCompatActivity {
             if (myLoc == null)
                 myLoc = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             //Log.d("MYLOCATION", myLoc.toString());
+            if (!gotHerd)
+                getHerdsWithin15Miles();
         }
         // Define a listener that responds to location updates
         final LocationListener locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
                 // Called when a new location is found by the network location provider.
                 myLoc = location;
+                if (!gotHerd)
+                    getHerdsWithin15Miles();
                 //Log.d("LOCATION", myLoc.toString());
             }
 

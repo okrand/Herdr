@@ -36,85 +36,79 @@ import java.util.Arrays;
 public class Login extends AppCompatActivity {
     CallbackManager callbackManager = CallbackManager.Factory.create();
     private FirebaseAuth mAuth;
-    //startBrowse.putExtra("key", value); //Optional parameters
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
-        //mAuth = FirebaseAuth.getInstance();
         final Intent startBrowse = new Intent(Login.this, Browse.class);
-
         if (AccessToken.getCurrentAccessToken() != null){ // If already logged in, move onto next activity
+            Log.d("ACCESSTOKEN", "NOT NULL");
             LoginManager.getInstance().logInWithReadPermissions(Login.this, Arrays.asList("email", "public_profile"));
             //Log.d("LOGGED", "Logged In " + Profile.getCurrentProfile().getName());
             handleFacebookAccessToken(AccessToken.getCurrentAccessToken());
-            finish();
         }
+        Log.d("ACCESSTOKEN", "NULL");
         LoginButton loginButton = findViewById(R.id.login_button);
+        loginButton.setReadPermissions(Arrays.asList("email", "public_profile"));
         loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                LoginManager.getInstance().logInWithReadPermissions(Login.this, Arrays.asList("email", "public_profile"));
-                LoginManager.getInstance().registerCallback(callbackManager,
-                        new FacebookCallback<LoginResult>() {
-                            @Override
-                            public void onSuccess(final LoginResult loginResult) {
-//                                final String firstName = Profile.getCurrentProfile().getFirstName();
-//                                Log.d("FACEBOOK", Profile.getCurrentProfile().getName());
-                                // Check user's age range for 18+
-                                new GraphRequest(
-                                        AccessToken.getCurrentAccessToken(),
-                                        "me?fields=age_range",
-                                        null,
-                                        HttpMethod.GET,
-                                        new GraphRequest.Callback() {
-                                            public void onCompleted(GraphResponse response) {
-                                                Log.d("GraphAPI", response.toString());
-                                                JSONObject jsonObject = response.getJSONObject();
-                                                try {
-                                                    JSONObject age_range = jsonObject.getJSONObject("age_range");
-                                                    if ((int) age_range.get("min") < 18){
-                                                        //user below 18
-                                                        Toast.makeText(getApplicationContext(), "You aren't old enough",Toast.LENGTH_LONG).show();
-                                                        LoginManager.getInstance().logOut();
-                                                    }
-                                                    else{ //Welcome user
-                                                        handleFacebookAccessToken(loginResult.getAccessToken());
-                                                        Toast.makeText(getApplicationContext(),"Welcome "+Profile.getCurrentProfile().getName(),Toast.LENGTH_LONG).show();
-                                                        Login.this.startActivity(startBrowse);
-                                                        finish();
-                                                    }
-                                                } catch (JSONException e) {
-                                                    e.printStackTrace();
+        @Override
+        public void onClick(View v) {
+            final LoginManager loginManager = LoginManager.getInstance();
+            //loginManager.logInWithReadPermissions(Login.this, Arrays.asList("email", "public_profile"));
+            loginManager.registerCallback(callbackManager,
+                    new FacebookCallback<LoginResult>() {
+                        @Override
+                        public void onSuccess(final LoginResult loginResult) {
+                            Log.d("CALLBACK", "SUCCESS");
+                            // Check user's age range for 18+
+                            new GraphRequest(
+                                    AccessToken.getCurrentAccessToken(),
+                                    "me?fields=age_range",
+                                    null,
+                                    HttpMethod.GET,
+                                    new GraphRequest.Callback() {
+                                        public void onCompleted(GraphResponse response) {
+                                            Log.d("GraphAPI", response.toString());
+                                            JSONObject jsonObject = response.getJSONObject();
+                                            try {
+                                                JSONObject age_range = jsonObject.getJSONObject("age_range");
+                                                if ((int) age_range.get("min") < 18) {
+                                                    //user below 18
+                                                    Toast.makeText(getApplicationContext(), "You aren't old enough", Toast.LENGTH_LONG).show();
+                                                    loginManager.logOut();
+                                                } else { //Welcome user
+                                                    //Log.d("WELCOME USER", "Welcome" + Profile.getCurrentProfile().getFirstName());
+                                                    handleFacebookAccessToken(loginResult.getAccessToken());
+                                                    //Toast.makeText(getApplicationContext(), "Welcome " + Profile.getCurrentProfile().getName(), Toast.LENGTH_LONG).show();
                                                 }
+                                            } catch (JSONException e) {
+                                                Log.d("ONCOMPLETEEXCEPTION", "JSONEXCEPTION");
+                                                e.printStackTrace();
                                             }
                                         }
-                                ).executeAsync();
+                                    }
+                            ).executeAsync();
+                        }
 
-                            }
+                        @Override
+                        public void onCancel() {
+                            Toast.makeText(getApplicationContext(), "You need a Facebook account to use Herdr", Toast.LENGTH_LONG).show();
+                            Log.d("FACEBOOK", "CANCEL");
+                            LoginManager.getInstance().logOut();
+                        }
 
-                            @Override
-                            public void onCancel() {
-                                Toast.makeText(getApplicationContext(),"You need a Facebook account to use Herdr",Toast.LENGTH_LONG).show();
-                                Log.d("FACEBOOK", "CANCEL");
-                            }
-
-
-                            @Override
-                            public void onError(FacebookException exception) {
-                                Toast.makeText(getApplicationContext(),"There was a problem logging you in.", Toast.LENGTH_LONG).show();
-                                Log.d("FACEBOOK", exception.toString());
-                            }
-                        });
-            }
-        });
-
-
+                        @Override
+                        public void onError(FacebookException exception) {
+                            Toast.makeText(getApplicationContext(), "There was a problem logging you in.", Toast.LENGTH_LONG).show();
+                            Log.d("FACEBOOK", exception.toString());
+                        }
+                    });
+                }
+            });
     }
 
     private void handleFacebookAccessToken(AccessToken token) {
         Log.d("FACEBOOKACCESSTOKEN", "handleFacebookAccessToken:" + token);
-
         AuthCredential credential = FacebookAuthProvider.getCredential(token.getToken());
         mAuth = FirebaseAuth.getInstance();
         mAuth.signInWithCredential(credential)
@@ -124,7 +118,7 @@ public class Login extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d("SUCCESS", "signInWithCredential:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
+                            Toast.makeText(getApplicationContext(), "Welcome " + Profile.getCurrentProfile().getFirstName(), Toast.LENGTH_LONG).show();
                             final Intent startBrowse = new Intent(Login.this, Browse.class);
                             Login.this.startActivity(startBrowse);
                             finish();
@@ -134,7 +128,6 @@ public class Login extends AppCompatActivity {
                             Toast.makeText(Login.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
                             LoginManager.getInstance().logOut();
-
                         }
                     }
                 });
@@ -143,7 +136,6 @@ public class Login extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         callbackManager.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
-
     }
 
     @Override

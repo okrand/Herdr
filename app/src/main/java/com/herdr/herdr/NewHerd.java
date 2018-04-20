@@ -31,6 +31,7 @@ public class NewHerd extends AppCompatActivity {
 
     int hour;
     int minute;
+    int AMPM; //0 = AM, 1 = PM
     LatLon myPlace;
     String address;
     private FirebaseAuth mAuth;
@@ -56,9 +57,11 @@ public class NewHerd extends AppCompatActivity {
         int initialMinute = mcurrentTime.get(Calendar.MINUTE);
         hour = initialHour;
         minute = initialMinute;
+        AMPM = 0;
 
         String initialAMPM = "AM";
         if (initialHour > 12){
+            AMPM = 1;
             initialAMPM = "PM";
             initialHour -= 12;
         }
@@ -78,15 +81,20 @@ public class NewHerd extends AppCompatActivity {
                         hour = selectedHour;
                         minute = selectedMinute;
                         String selectedAMPM = "AM";
+                        AMPM = 0;
                         if (selectedHour > 12){
+                            AMPM = 1;
                             selectedAMPM = "PM";
                             selectedHour -= 12;
                         }
                         String strMin = String.valueOf(selectedMinute);
+                        String strHour = String.valueOf(selectedHour);
+                        if (selectedHour == 0)
+                            strHour = "0" + strHour;
                         if (selectedMinute < 10){
                             strMin = "0" + strMin;
                         }
-                        eventTime.setText( selectedHour + ":" + strMin + " " + selectedAMPM);
+                        eventTime.setText( strHour + ":" + strMin + " " + selectedAMPM);
                     }
                 }, hour, minute, false); //True = 24 hour time
                 mTimePicker.setTitle("Select Time");
@@ -111,6 +119,10 @@ public class NewHerd extends AppCompatActivity {
         button_create.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Calendar todate = Calendar.getInstance();
+                todate.set(Calendar.HOUR_OF_DAY, hour);
+                todate.set(Calendar.MINUTE, minute);
+
                 if (String.valueOf(pickAPlace.getText()).equals("") || pickAPlace.getText() == null) {
                     Toast.makeText(getApplicationContext(),"All herds must have a location", Toast.LENGTH_LONG).show();
                 }
@@ -124,12 +136,12 @@ public class NewHerd extends AppCompatActivity {
                     nHerd.setCreatorID(currentUser.getUid());
                     nHerd.setPlace(myPlace);
                     nHerd.setAddress(address);
-                    if (today.isChecked())
-                        nHerd.setToday_tomorrow(0);
-                    else
-                        nHerd.setToday_tomorrow(1);
+                    if (!today.isChecked())
+                        todate.add(Calendar.DATE, 1);
+                    nHerd.setCal(todate.getTime());
                     nHerd.setTime(String.valueOf(eventTime.getText()));
                     pushRef.setValue(nHerd);
+                    setResult(RESULT_OK);
                     finish();
                 }
             }
